@@ -1,0 +1,9 @@
+[package]
+name = "autodomd-library-parser"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "parser.rs"
+
+[dependencies]

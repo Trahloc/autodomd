@@ -1,0 +1,9 @@
+[package]
+name = "autodomd-library-generator"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "generator.rs"
+
+[dependencies]

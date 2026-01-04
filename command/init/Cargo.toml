@@ -1,0 +1,9 @@
+[package]
+name = "autodomd-command-init"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "init.rs"
+
+[dependencies]

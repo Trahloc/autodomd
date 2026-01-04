@@ -1,0 +1,14 @@
+[package]
+name = "autodomd-binary"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "autodomd"
+path = "src/autodomd.rs"
+
+[features]
+default = []
+full = []
+
+[dependencies]

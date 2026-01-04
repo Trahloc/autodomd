@@ -1,0 +1,9 @@
+[package]
+name = "autodomd-command-generate"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "generate.rs"
+
+[dependencies]
