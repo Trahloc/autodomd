@@ -1,16 +1,16 @@
 ---
 format: extramark-todo-v1
 generator: autodomd
-generated_at: 2026-01-04T06:58:12Z
+generated_at: 2026-01-04T07:00:19Z
 total_tasks: 13
 regenerate_command: autodomd generate
 ---
 
 # Project Tasks
 
-## Advanced
+## Advanced Tasks
 
-## Implement Configuration File Support
+### Implement Configuration File Support
 
 Add support for configuration files to customize autodomd behavior without command-line options.
 
@@ -18,7 +18,7 @@ Add support for configuration files to customize autodomd behavior without comma
 
 📄 ./todo/advanced/configuration-file.md
 
-## Implement Incremental Updates and Caching
+### Implement Incremental Updates and Caching
 
 Optimize performance by only re-scanning modified files and caching parsing results.
 
@@ -26,7 +26,7 @@ Optimize performance by only re-scanning modified files and caching parsing resu
 
 📄 ./todo/advanced/incremental-updates.md
 
-## Implement Multiple Output Formats
+### Implement Multiple Output Formats
 
 Support various output formats beyond markdown for different use cases and integrations.
 
@@ -35,29 +35,38 @@ Support various output formats beyond markdown for different use cases and integ
 📄 ./todo/advanced/output-formats.md
 
 
-## Architecture
+## Architecture Tasks
 
-## Implement Core Auto-Todo Functionality
+### Implement Core Auto-Todo Functionality
 
 Create the core functionality to scan source code and markdown files for TODO items and generate a consolidated TODO.
 
 📅 Created: 2026-01-04 • 🔄 Modified: 2026-01-04 • 🚫 Blocks: configuration-file, incremental-updates, output-formats, cli-interface, git-hooks, ci-cd-validation, testing-validation • ⚡ Effort: high
 
+**Enables work on:**
+  - `configuration-file`
+  - `incremental-updates`
+  - `output-formats`
+  - `cli-interface`
+  - `git-hooks`
+  - `ci-cd-validation`
+  - `testing-validation`
+
 📄 ./todo/architecture/core-functionality.md
 
 
-## Category
+## Category Tasks
 
-## Description
+### Description
 
 📅 Created: 2026-01-04 • 🔄 Modified: 2026-01-04
 
 📄 ./library/parser/parser.rs
 
 
-## Documentation
+## Documentation Tasks
 
-## Improve Error Messages and User Experience
+### Improve Error Messages and User Experience
 
 Provide clear, actionable error messages and improve overall user experience.
 
@@ -65,7 +74,7 @@ Provide clear, actionable error messages and improve overall user experience.
 
 📄 ./todo/documentation/error-messages.md
 
-## Update README with Complete Documentation
+### Update README with Complete Documentation
 
 Ensure the README provides comprehensive information for users and contributors.
 
@@ -74,24 +83,24 @@ Ensure the README provides comprehensive information for users and contributors.
 📄 ./todo/documentation/readme-updates.md
 
 
-## General
+## General Tasks
 
-## Implement integration tests
+### Implement integration tests
 
 📅 Created: 2026-01-04 • 🔄 Modified: 2026-01-04
 
 📄 ./tests/integration.rs
 
-## AutoDomd Implementation Plan (Rust Edition)
+### AutoDomd Implementation Plan (Rust Edition)
 
 📅 Created: 2026-01-04 • 🔄 Modified: 2026-01-04
 
 📄 ./todo/oldtodo.md
 
 
-## Implementation
+## Implementation Tasks
 
-## Implement CLI Interface and Script
+### Implement CLI Interface and Script
 
 Create a command-line interface that provides easy access to the auto-todo functionality.
 
@@ -100,9 +109,9 @@ Create a command-line interface that provides easy access to the auto-todo funct
 📄 ./todo/implementation/cli-interface.md
 
 
-## Integration
+## Integration Tasks
 
-## Implement CI/CD Integration
+### Implement CI/CD Integration
 
 Ensure TODO.
 
@@ -110,7 +119,7 @@ Ensure TODO.
 
 📄 ./todo/integration/ci-cd-validation.md
 
-## Implement Git Integration and Automation
+### Implement Git Integration and Automation
 
 Set up automatic TODO.
 
@@ -119,9 +128,9 @@ Set up automatic TODO.
 📄 ./todo/integration/git-hooks.md
 
 
-## Validation
+## Validation Tasks
 
-## Implement Testing and Validation
+### Implement Testing and Validation
 
 Create comprehensive tests and validation examples to ensure the auto-todo system works correctly.
 

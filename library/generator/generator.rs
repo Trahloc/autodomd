@@ -84,14 +84,14 @@ fn generate_markdown_content(tasks: &[Task], config: &GeneratorConfig) -> String
 
     for category_name in category_names {
         if let Some(category_tasks) = tasks_by_category.get_mut(&category_name) {
-            content.push_str(&format!("## {}\n\n", category_name));
+            content.push_str(&format!("## {} Tasks\n\n", category_name));
 
             // Sort tasks within category by priority (High first, then Medium, then Low)
             category_tasks.sort_by(|a, b| b.priority.cmp(&a.priority));
 
             for task in category_tasks.iter() {
-                // Clean, minimal task format
-                content.push_str(&format!("## {}\n\n", task.title));
+                // Clean, minimal task format with proper hierarchy
+                content.push_str(&format!("### {}\n\n", task.title));
 
                 // Add brief description if available
                 if let TaskSource::Markdown = task.source {
@@ -146,6 +146,24 @@ fn generate_markdown_content(tasks: &[Task], config: &GeneratorConfig) -> String
                 if !metadata_lines.is_empty() {
                     content.push_str(&metadata_lines.join(" • "));
                     content.push_str("\n\n");
+                }
+
+                // Show blocking relationships as indented sub-items
+                if let TaskSource::Markdown = task.source {
+                    if let Ok(metadata) = extract_task_metadata(&task.location.file_path) {
+                        for (key, value) in metadata {
+                            if key == "blocks" && !value.is_empty() && value != "[]" {
+                                let blockers = clean_yaml_array(&value);
+                                if !blockers.is_empty() {
+                                    content.push_str("**Enables work on:**\n");
+                                    for blocker in blockers.split(", ") {
+                                        content.push_str(&format!("  - `{}`\n", blocker.trim()));
+                                    }
+                                    content.push_str("\n");
+                                }
+                            }
+                        }
+                    }
                 }
 
                 // Link to full specification
