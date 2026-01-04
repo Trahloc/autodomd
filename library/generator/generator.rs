@@ -78,20 +78,46 @@ fn generate_markdown_content(tasks: &[Task], config: &GeneratorConfig) -> String
         tasks_by_category.entry(category_name).or_insert_with(Vec::new).push(task);
     }
 
-    // Generate sections for each category, sorted by priority within each category
-    let mut category_names: Vec<String> = tasks_by_category.keys().cloned().collect();
-    category_names.sort();
+    // Build dependency graph and show hierarchical relationships
+    let dependency_graph = build_task_dependency_graph(tasks);
+    let execution_order = topological_sort_by_dependencies(tasks, &dependency_graph);
 
-    for category_name in category_names {
-        if let Some(category_tasks) = tasks_by_category.get_mut(&category_name) {
-            content.push_str(&format!("## {} Tasks\n\n", category_name));
+    // Group tasks by their foundation level (how many dependencies they have)
+    let mut foundation_groups: HashMap<usize, Vec<&Task>> = HashMap::new();
 
-            // Sort tasks within category by priority (High first, then Medium, then Low)
-            category_tasks.sort_by(|a, b| b.priority.cmp(&a.priority));
+    for task in &execution_order {
+        let dep_count = count_dependencies(task, &dependency_graph);
+        foundation_groups.entry(dep_count).or_insert_with(Vec::new).push(*task);
+    }
 
-            for task in category_tasks.iter() {
-                // Clean, minimal task format with proper hierarchy
-                content.push_str(&format!("### {}\n\n", task.title));
+    // Generate sections showing the dependency hierarchy
+    let mut foundation_levels: Vec<usize> = foundation_groups.keys().cloned().collect();
+    foundation_levels.sort();
+
+    for (level_idx, &level) in foundation_levels.iter().enumerate() {
+        if let Some(level_tasks) = foundation_groups.get(&level) {
+            let level_name = match level {
+                0 => "Foundation Tasks",
+                1 => "Secondary Tasks",
+                2..=5 => &format!("Dependent Tasks (Level {})", level),
+                _ => "Complex Dependencies",
+            };
+
+            content.push_str(&format!("## {} (Priority Level {})\n\n", level_name, level_idx + 1));
+
+            for task in level_tasks.iter() {
+                // Task header with category context
+                let category_indicator = match task.category.display_name() {
+                    "Architecture" => "🏗️",
+                    "Implementation" => "⚙️",
+                    "Integration" => "🔗",
+                    "Validation" => "✅",
+                    "Advanced" => "🚀",
+                    "Documentation" => "📚",
+                    _ => "📋",
+                };
+
+                content.push_str(&format!("### {} {}\n\n", category_indicator, task.title));
 
                 // Add brief description if available
                 if let TaskSource::Markdown = task.source {
@@ -105,15 +131,15 @@ fn generate_markdown_content(tasks: &[Task], config: &GeneratorConfig) -> String
                 // Add key metadata in clean format
                 let mut metadata_lines = Vec::new();
 
-                // Add timestamps
+                // Add Zulu timestamps
                 if let Ok(metadata) = std::fs::metadata(&task.location.file_path) {
                     if let Ok(created) = metadata.created() {
                         let created_dt: DateTime<Utc> = created.into();
-                        metadata_lines.push(format!("📅 Created: {}", created_dt.format("%Y-%m-%d")));
+                        metadata_lines.push(format!("📅 Created: {}", created_dt.format("%Y-%m-%dT%H:%M:%SZ")));
                     }
                     if let Ok(modified) = metadata.modified() {
                         let modified_dt: DateTime<Utc> = modified.into();
-                        metadata_lines.push(format!("🔄 Modified: {}", modified_dt.format("%Y-%m-%d")));
+                        metadata_lines.push(format!("🔄 Modified: {}", modified_dt.format("%Y-%m-%dT%H:%M:%SZ")));
                     }
                 }
 
@@ -148,20 +174,35 @@ fn generate_markdown_content(tasks: &[Task], config: &GeneratorConfig) -> String
                     content.push_str("\n\n");
                 }
 
-                // Show blocking relationships as indented sub-items
+                // Show comprehensive relationships
                 if let TaskSource::Markdown = task.source {
                     if let Ok(metadata) = extract_task_metadata(&task.location.file_path) {
-                        for (key, value) in metadata {
-                            if key == "blocks" && !value.is_empty() && value != "[]" {
-                                let blockers = clean_yaml_array(&value);
-                                if !blockers.is_empty() {
-                                    content.push_str("**Enables work on:**\n");
-                                    for blocker in blockers.split(", ") {
-                                        content.push_str(&format!("  - `{}`\n", blocker.trim()));
+                        let mut has_relationships = false;
+
+                        for (key, value) in &metadata {
+                            match key.as_str() {
+                                "dependencies" if !value.is_empty() && value != "[]" => {
+                                    if !has_relationships {
+                                        content.push_str("**Relationships:**\n");
+                                        has_relationships = true;
                                     }
-                                    content.push_str("\n");
+                                    let deps = clean_yaml_array(&value);
+                                    content.push_str(&format!("  - 🔗 **Depends on:** {}\n", deps));
                                 }
+                                "blocks" if !value.is_empty() && value != "[]" => {
+                                    if !has_relationships {
+                                        content.push_str("**Relationships:**\n");
+                                        has_relationships = true;
+                                    }
+                                    let blockers = clean_yaml_array(&value);
+                                    content.push_str(&format!("  - 🚫 **Enables:** {}\n", blockers));
+                                }
+                                _ => {}
                             }
+                        }
+
+                        if has_relationships {
+                            content.push_str("\n");
                         }
                     }
                 }
@@ -326,6 +367,68 @@ fn clean_yaml_array(value: &str) -> String {
          .filter(|s| !s.is_empty())
          .collect::<Vec<&str>>()
          .join(", ")
+}
+
+/// Build a dependency graph from tasks
+fn build_task_dependency_graph<'a>(tasks: &'a [Task]) -> HashMap<&'a str, Vec<&'a str>> {
+    let mut graph: HashMap<&str, Vec<&str>> = HashMap::new();
+
+    // Create task name to task mapping
+    let task_name_map: HashMap<&str, &Task> = tasks.iter()
+        .map(|task| (task.title.as_str(), task))
+        .collect();
+
+    for task in tasks {
+        let task_name = task.title.as_str();
+        let mut dependencies = Vec::new();
+
+        if let TaskSource::Markdown = task.source {
+            if let Ok(metadata) = extract_task_metadata(&task.location.file_path) {
+                for (key, value) in metadata {
+                    if key == "dependencies" && !value.is_empty() && value != "[]" {
+                        let deps = clean_yaml_array(&value);
+                        for dep in deps.split(", ") {
+                            // Map dependency names to actual task names if they match
+                            for (other_name, other_task) in &task_name_map {
+                                if dep.contains(&other_task.title) || other_task.title.contains(dep.trim()) {
+                                    dependencies.push(*other_name);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        graph.insert(task_name, dependencies);
+    }
+
+    graph
+}
+
+/// Count dependencies for a task
+fn count_dependencies<'a>(task: &'a Task, graph: &HashMap<&'a str, Vec<&'a str>>) -> usize {
+    graph.get(task.title.as_str()).map(|deps| deps.len()).unwrap_or(0)
+}
+
+/// Topological sort tasks by dependencies (simple implementation)
+fn topological_sort_by_dependencies<'a>(tasks: &'a [Task], graph: &HashMap<&'a str, Vec<&'a str>>) -> Vec<&'a Task> {
+    let mut result = Vec::new();
+    let mut processed = std::collections::HashSet::new();
+
+    // Simple topological sort - tasks with fewer dependencies first
+    let mut task_refs: Vec<&Task> = tasks.iter().collect();
+    task_refs.sort_by_key(|task| count_dependencies(task, graph));
+
+    for &task in &task_refs {
+        if !processed.contains(&task.title.as_str()) {
+            result.push(task);
+            processed.insert(task.title.as_str());
+        }
+    }
+
+    result
 }
 
 /// Extract a brief description from a markdown task file
