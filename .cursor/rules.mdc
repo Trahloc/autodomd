@@ -1,0 +1,192 @@
+# AutoDomd Project Rules - Cursor MDC
+
+## TODO Management System
+
+### Core Philosophy
+- **AI-First Design**: All systems optimized for AI comprehension and automation
+- **Self-Documenting**: Project tracks its own development progress
+- **Dependency-Driven**: Tasks organized by mandatory dependency trees
+- **Hierarchical Structure**: Folder paths represent dependency chains
+
+### TODO File Format (Extramark Standard)
+
+#### Required Structure
+```markdown
+# Task Title - ./path/to/file.md
+
+```yaml
+priority: high|medium|low
+dependencies: []  # Task IDs that must complete first
+blocks: []        # Task IDs that depend on this one
+estimated_effort: high|medium|low
+```
+
+## Overview
+Brief description of what this task entails.
+
+## Requirements
+- Specific requirements
+- Technical constraints
+- Success criteria
+
+## Implementation Notes
+- Suggested approach
+- Key considerations
+- Potential challenges
+
+## Success Criteria
+- How to know when this is complete
+- Testing requirements
+- Validation steps
+```
+
+#### YAML Metadata Rules
+- **priority**: high|medium|low (affects sorting in TODO.md)
+- **dependencies**: Array of task IDs that must complete first
+- **blocks**: Array of task IDs that depend on this one
+- **estimated_effort**: high|medium|low (implementation complexity)
+
+### Directory Structure Rules
+
+#### Mandatory Hierarchy
+```
+todo/
+├── XXX-foundation-task.md                    # Root level = no dependencies
+├── XXX-dependent-task.md                     # Root level = no dependencies
+├── XXX-parent-task/                          # Subfolder = depends on parent
+│   ├── YYY-child-task.md                     # Depends on XXX-parent-task
+│   └── YYY-child-task/                       # Deeper nesting allowed
+│       └── ZZZ-grandchild-task.md            # Depends on YYY-child-task
+```
+
+#### Numbering System
+- **XXX/YYY/ZZZ**: Increments of 10 (010, 020, 030...) for insertion room
+- **Allows future task insertion** without renumbering entire tree
+- **Lower numbers = higher priority** execution order
+
+#### Dependency Rules
+1. **Root level** (`todo/XXX-task.md`): Foundational tasks (nothing depends on these)
+2. **Level 2** (`todo/XXX-parent/YYY-child.md`): Depends directly on parent root task
+3. **Level 3+** (`todo/XXX-parent/YYY-child/ZZZ-grandchild.md`): Depends on immediate parent
+4. **Maximum 3 levels deep** (reject deeper nesting)
+5. **No cycles**: Dependencies flow downward only
+
+#### File Naming
+- `XXX-brief-task-name.md` (kebab-case, no spaces in filenames)
+- Task title in file can be more descriptive
+- **No special characters** in filenames
+
+### TODO.md Generation Rules
+
+#### Extramark Frontmatter
+```yaml
+---
+format: extramark-todo-v1
+generator: autodomd
+generated_at: 2026-01-04T06:39:50Z
+total_tasks: 13
+regenerate_command: autodomd generate
+---
+```
+
+#### Task Display Format
+```markdown
+### Task Title - ./path/to/file.md
+- Created: 2026-01-04T05:49:52Z
+- Modified: 2026-01-04T06:48:39Z
+- Effort: high
+-- Brief description from Overview section.
+
+**Relationships:** Depends: parent-task • Enables: child-task-1, child-task-2
+```
+
+#### Organization Rules
+- **Dependency-based grouping** (Foundation → Secondary → Dependent levels)
+- **Priority sorting** within each dependency level
+- **Zulu timestamps** for all dates (ISO 8601 format)
+- **Clean visual cohesion** (no YAML blocks, natural flow)
+
+### AI Interaction Rules
+
+#### Task Selection
+- **Read TODO.md first** for current status and priorities
+- **Check full task files** for detailed requirements and context
+- **Respect dependencies** - never work on tasks with unmet prerequisites
+- **Update progress** by modifying task files or TODO.md regeneration
+
+#### Implementation Workflow
+1. **Scan TODO.md** for available tasks (no outstanding dependencies)
+2. **Read full task file** for complete context
+3. **Implement solution** following requirements and implementation notes
+4. **Update task status** via YAML metadata or file completion
+5. **Regenerate TODO.md** to reflect changes
+
+#### Code Generation Standards
+- **Follow existing patterns** in codebase
+- **Include comprehensive error handling**
+- **Add unit tests** for new functionality
+- **Update documentation** as needed
+- **Follow r2026t microcrate conventions**
+
+### Quality Gates
+
+#### Pre-Commit Requirements
+- **All tests pass**: `cargo test`
+- **Code formatting**: `cargo fmt --check`
+- **Linting clean**: `cargo clippy`
+- **TODO.md up-to-date**: `autodomd generate` shows no changes
+
+#### Task Completion Criteria
+- **Requirements met**: All items in Requirements section implemented
+- **Success criteria passed**: All validation steps completed
+- **Tests added**: Comprehensive test coverage for new functionality
+- **Documentation updated**: README and docs reflect changes
+- **Dependencies notified**: Any blocking tasks updated
+
+### Rejection Criteria
+
+#### Invalid TODO Structures
+- **REJECT**: Tasks without proper YAML frontmatter
+- **REJECT**: Circular dependencies
+- **REJECT**: Tasks deeper than 3 folder levels
+- **REJECT**: Non-numeric naming schemes
+- **REJECT**: Tasks with unmet dependencies
+
+#### Implementation Issues
+- **REJECT**: Code that doesn't follow existing patterns
+- **REJECT**: Missing error handling
+- **REJECT**: Breaking changes without migration path
+- **REJECT**: Inadequate test coverage
+
+### Tool Usage Standards
+
+#### Required Commands
+- `cargo build` - Build project
+- `cargo test` - Run test suite
+- `cargo fmt` - Format code
+- `cargo clippy` - Lint code
+- `./autodomd generate` - Update TODO.md
+- `./autodomd scan` - Check for new tasks
+
+#### File Organization
+- **Source code**: `src/` or `bin/src/` following r2026t
+- **Tests**: `tests/` for integration tests
+- **Documentation**: `docs/` for specifications
+- **Tasks**: `todo/` following dependency hierarchy
+- **Configuration**: Root level config files
+
+### Communication Standards
+
+#### Progress Updates
+- **Commit frequently** with descriptive messages
+- **Update TODO.md** when task status changes
+- **Document decisions** in commit messages
+- **Flag blockers** immediately
+
+#### Issue Resolution
+- **Provide context** when asking for help
+- **Include error messages** and reproduction steps
+- **Suggest solutions** when identifying problems
+- **Reference task IDs** when discussing specific work
+
+This MDC ensures **consistent, AI-comprehensible project management** across all future development sessions.
