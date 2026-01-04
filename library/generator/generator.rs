@@ -457,16 +457,30 @@ fn extract_brief_description(file_path: &std::path::Path) -> TodoResult<String> 
         let after_overview = &content_after_yaml[overview_start + 11..];
         if let Some(end_section) = after_overview.find("\n## ") {
             let overview_text = &after_overview[..end_section].trim();
-            // Take first sentence or first 200 chars for more context
-            if let Some(first_sentence_end) = overview_text.find('.') {
-                if first_sentence_end < 200 {
-                    return Ok(overview_text[..first_sentence_end + 1].to_string());
+            // Try to find a proper sentence end (not part of abbreviations like "TODO.md" or "e.g.")
+            for (i, c) in overview_text.char_indices() {
+                if c == '.' {
+                    // Check if this period is followed by a space or end of text (indicating sentence end)
+                    let remaining = &overview_text[i + 1..];
+                    let next_char = remaining.chars().next();
+
+                    if next_char.map_or(true, |c| c.is_whitespace() || c == '\n') {
+                        // This looks like a sentence-ending period
+                        if i < 300 {
+                            return Ok(overview_text[..i + 1].to_string());
+                        }
+                        break; // Found sentence end but too long, fall through to truncation
+                    }
+                    // This is probably part of an abbreviation, continue looking
                 }
             }
-            Ok(overview_text.chars().take(200).collect::<String>() + if overview_text.len() > 200 { "..." } else { "" })
+
+            // No proper sentence end found, or sentence too long - truncate at 300 chars
+            Ok(overview_text.chars().take(300).collect::<String>() + if overview_text.len() > 300 { "..." } else { "" })
         } else {
             // Take the whole overview section if no other sections follow
-            Ok(after_overview.trim().chars().take(200).collect::<String>() + if after_overview.len() > 200 { "..." } else { "" })
+            // Take up to 300 chars for the whole overview section
+            Ok(after_overview.trim().chars().take(300).collect::<String>() + if after_overview.len() > 300 { "..." } else { "" })
         }
     } else {
         Ok("".to_string())

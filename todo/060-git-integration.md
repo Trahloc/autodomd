@@ -1,5 +1,12 @@
 # Implement Git Integration and Automation
 
+```yaml
+priority: medium
+dependencies: []
+blocks: ["ci-cd-validation"]
+estimated_effort: medium
+```
+
 ## Overview
 Set up automatic TODO.md generation as part of the development workflow.
 

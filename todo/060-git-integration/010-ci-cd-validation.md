@@ -1,5 +1,12 @@
 # Implement CI/CD Integration
 
+```yaml
+priority: medium
+dependencies: ["git-integration"]
+blocks: []
+estimated_effort: medium
+```
+
 ## Overview
 Ensure TODO.md generation and validation is part of the continuous integration pipeline.
 
