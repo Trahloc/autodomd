@@ -7,3 +7,5 @@ edition = "2021"
 path = "generate.rs"
 
 [dependencies]
+autodomd-library-common = { path = "../../library/common" }
+autodomd-library-generator = { path = "../../library/generator" }

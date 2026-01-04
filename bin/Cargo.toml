@@ -8,7 +8,15 @@ name = "autodomd"
 path = "src/autodomd.rs"
 
 [features]
-default = []
-full = []
+default = ["scan", "generate", "init"]
+scan = ["autodomd-command-scan"]
+generate = ["autodomd-command-generate"]
+init = ["autodomd-command-init"]
+full = ["scan", "generate", "init"]
 
 [dependencies]
+clap = { version = "4.0", features = ["derive"] }
+autodomd-library-common = { path = "../library/common" }
+autodomd-command-scan = { path = "../command/scan", optional = true }
+autodomd-command-generate = { path = "../command/generate", optional = true }
+autodomd-command-init = { path = "../command/init", optional = true }

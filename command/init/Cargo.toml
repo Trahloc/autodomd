@@ -7,3 +7,4 @@ edition = "2021"
 path = "init.rs"
 
 [dependencies]
+autodomd-library-common = { path = "../../library/common" }
