@@ -90,50 +90,66 @@ fn generate_markdown_content(tasks: &[Task], config: &GeneratorConfig) -> String
             category_tasks.sort_by(|a, b| b.priority.cmp(&a.priority));
 
             for task in category_tasks.iter() {
-                // AI-centric task format
+                // Clean, minimal task format
                 content.push_str(&format!("## {}\n\n", task.title));
-
-                // Structured metadata block
-                content.push_str("```yaml\n");
-                content.push_str(&format!("id: {}\n", task.location.file_path.display()));
-                content.push_str(&format!("category: {}\n", task.category.display_name()));
-                content.push_str(&format!("priority: {}\n", match task.priority {
-                    autodomd_library_common::TaskPriority::High => "high",
-                    autodomd_library_common::TaskPriority::Medium => "medium",
-                    autodomd_library_common::TaskPriority::Low => "low",
-                }));
-
-                if let Some(line) = task.location.line_number {
-                    content.push_str(&format!("line: {}\n", line));
-                }
-
-                content.push_str(&format!("source: {}\n", match task.source {
-                    TaskSource::Markdown => "markdown",
-                    TaskSource::Code => "code",
-                }));
-
-                // Add extracted metadata from markdown files
-                if let TaskSource::Markdown = task.source {
-                    if let Ok(metadata) = extract_task_metadata(&task.location.file_path) {
-                        for (key, value) in metadata {
-                            content.push_str(&format!("{}: {}\n", key, value));
-                        }
-                    }
-                }
-
-                content.push_str("```\n\n");
 
                 // Add brief description if available
                 if let TaskSource::Markdown = task.source {
                     if let Ok(description) = extract_brief_description(&task.location.file_path) {
                         if !description.is_empty() {
-                            content.push_str(&format!("**Overview:** {}\n\n", description));
+                            content.push_str(&format!("{}\n\n", description));
                         }
                     }
                 }
 
+                // Add key metadata in clean format
+                let mut metadata_lines = Vec::new();
+
+                // Add timestamps
+                if let Ok(metadata) = std::fs::metadata(&task.location.file_path) {
+                    if let Ok(created) = metadata.created() {
+                        let created_dt: DateTime<Utc> = created.into();
+                        metadata_lines.push(format!("📅 Created: {}", created_dt.format("%Y-%m-%d")));
+                    }
+                    if let Ok(modified) = metadata.modified() {
+                        let modified_dt: DateTime<Utc> = modified.into();
+                        metadata_lines.push(format!("🔄 Modified: {}", modified_dt.format("%Y-%m-%d")));
+                    }
+                }
+
+                // Add extracted metadata from YAML frontmatter (dependencies, effort, etc.)
+                if let TaskSource::Markdown = task.source {
+                    if let Ok(metadata) = extract_task_metadata(&task.location.file_path) {
+                        for (key, value) in metadata {
+                            match key.as_str() {
+                                "dependencies" if !value.is_empty() && value != "[]" => {
+                                    let cleaned = clean_yaml_array(&value);
+                                    if !cleaned.is_empty() {
+                                        metadata_lines.push(format!("🔗 Depends: {}", cleaned));
+                                    }
+                                }
+                                "blocks" if !value.is_empty() && value != "[]" => {
+                                    let cleaned = clean_yaml_array(&value);
+                                    if !cleaned.is_empty() {
+                                        metadata_lines.push(format!("🚫 Blocks: {}", cleaned));
+                                    }
+                                }
+                                "estimated_effort" => {
+                                    metadata_lines.push(format!("⚡ Effort: {}", value));
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+                }
+
+                if !metadata_lines.is_empty() {
+                    content.push_str(&metadata_lines.join(" • "));
+                    content.push_str("\n\n");
+                }
+
                 // Link to full specification
-                content.push_str(&format!("**Full specification:** {}\n\n", task.location.file_path.display()));
+                content.push_str(&format!("📄 {}\n\n", task.location.file_path.display()));
             }
 
             content.push_str("\n");
@@ -281,6 +297,17 @@ fn extract_yaml_metadata_block(content: &str) -> Option<&str> {
     }
 
     None
+}
+
+/// Clean YAML array format for display
+fn clean_yaml_array(value: &str) -> String {
+    // Remove brackets and quotes, clean up commas
+    value.trim_matches(&['[', ']'] as &[_])
+         .split(',')
+         .map(|s| s.trim().trim_matches('"'))
+         .filter(|s| !s.is_empty())
+         .collect::<Vec<&str>>()
+         .join(", ")
 }
 
 /// Extract a brief description from a markdown task file
