@@ -30,11 +30,14 @@ pub fn parse_markdown_files(files: &[std::path::PathBuf]) -> TodoResult<Vec<Task
 fn parse_markdown_file(file_path: &Path) -> TodoResult<Vec<Task>> {
     let content = fs::read_to_string(file_path)?;
 
+    // Extract category from directory structure
+    let category = extract_category_from_path(file_path);
+
     // Look for the first H1 header
     if let Some(title) = extract_first_h1(&content) {
         let task = Task::from_markdown(
             title.to_string(),
-            TaskCategory::General, // Markdown tasks are general by default
+            category,
             file_path.to_path_buf(),
         );
         Ok(vec![task])
@@ -47,10 +50,41 @@ fn parse_markdown_file(file_path: &Path) -> TodoResult<Vec<Task>> {
 
         let task = Task::from_markdown(
             filename.to_string(),
-            TaskCategory::General,
+            category,
             file_path.to_path_buf(),
         );
         Ok(vec![task])
+    }
+}
+
+/// Extract category from the directory path relative to todo/
+fn extract_category_from_path(file_path: &Path) -> TaskCategory {
+    // Convert path to string for easier manipulation
+    let path_str = file_path.to_string_lossy();
+
+    // Find the todo/ directory in the path
+    if let Some(todo_pos) = path_str.find("todo/") {
+        let after_todo = &path_str[todo_pos + 5..]; // Skip "todo/"
+
+        // Find the next directory separator
+        if let Some(separator_pos) = after_todo.find('/') {
+            let category_dir = &after_todo[..separator_pos];
+
+            // Capitalize first letter for better display
+            let capitalized = category_dir
+                .chars()
+                .enumerate()
+                .map(|(i, c)| if i == 0 { c.to_ascii_uppercase() } else { c })
+                .collect::<String>();
+
+            TaskCategory::Custom(capitalized)
+        } else {
+            // No subdirectory, check if it's directly in todo/
+            TaskCategory::General
+        }
+    } else {
+        // Not in todo/ directory, use general category
+        TaskCategory::General
     }
 }
 
