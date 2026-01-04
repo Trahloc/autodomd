@@ -3,13 +3,9 @@
 
 ---
 
-## Auth
-
-- [ ] Implement command-line argument parsing\n// TODO(UI): Add colored output for better user experience"), (./command/init/init.rs:88)
-
 ## Category
 
-- [ ] Description (./library/parser/parser.rs:152)
+- [ ] Description (./library/parser/parser.rs:154)
 
 ## General
 
@@ -19,8 +15,4 @@
 - [ ] Implement CI/CD Integration (./todo/integration/ci-cd-validation.md)
 - [ ] Implement Git Integration and Automation (./todo/integration/git-hooks.md)
 - [ ] Implement Testing and Validation (./todo/validation/testing-validation.md)
-
-## Testing
-
-- [ ] Add comprehensive unit tests for TaskCollection\n// TODO(Docs): Add documentation examples"), (./command/init/init.rs:89)
 

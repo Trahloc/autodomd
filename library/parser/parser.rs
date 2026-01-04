@@ -121,12 +121,14 @@ fn get_comment_patterns(extension: &str) -> Vec<&'static str> {
 fn parse_todo_line(line: &str, comment_patterns: &[&str], line_number: usize, file_path: &Path) -> Option<Task> {
     let trimmed = line.trim();
 
+    // Only process lines that start with a comment pattern (after trimming whitespace)
+    // This avoids matching TODO patterns inside string literals
     for &pattern in comment_patterns {
-        if let Some(comment_start) = trimmed.find(pattern) {
-            let after_comment = &trimmed[comment_start + pattern.len()..];
+        if trimmed.starts_with(pattern) {
+            let after_comment = &trimmed[pattern.len()..];
 
             // Look for TODO followed by optional category
-            if let Some(todo_match) = extract_todo_from_comment(after_comment) {
+            if let Some(todo_match) = extract_todo_from_comment(after_comment.trim_start()) {
                 return Some(Task::from_code(
                     todo_match.title,
                     todo_match.category,
