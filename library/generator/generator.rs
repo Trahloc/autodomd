@@ -337,9 +337,9 @@ fn clean_yaml_array(value: &str) -> String {
          .join(", ")
 }
 
-/// Build a dependency graph from tasks
-fn build_task_dependency_graph<'a>(tasks: &'a [Task]) -> HashMap<&'a str, Vec<&'a str>> {
-    let mut graph: HashMap<&str, Vec<&str>> = HashMap::new();
+/// Build a dependency graph from folder structure and explicit metadata
+fn build_task_dependency_graph<'a>(tasks: &'a [Task]) -> HashMap<&'a str, Vec<String>> {
+    let mut graph: HashMap<&str, Vec<String>> = HashMap::new();
 
     // Create task name to task mapping
     let task_name_map: HashMap<&str, &Task> = tasks.iter()
@@ -350,16 +350,24 @@ fn build_task_dependency_graph<'a>(tasks: &'a [Task]) -> HashMap<&'a str, Vec<&'
         let task_name = task.title.as_str();
         let mut dependencies = Vec::new();
 
+        // Parse folder-based dependencies from path structure
+        if let Some(folder_deps) = parse_folder_dependencies(&task.location.file_path) {
+            dependencies.extend(folder_deps);
+        }
+
+        // Also check explicit metadata dependencies
         if let TaskSource::Markdown = task.source {
             if let Ok(metadata) = extract_task_metadata(&task.location.file_path) {
                 for (key, value) in metadata {
                     if key == "dependencies" && !value.is_empty() && value != "[]" {
                         let deps = clean_yaml_array(&value);
                         for dep in deps.split(", ") {
-                            // Map dependency names to actual task names if they match
+                            // Map dependency names to actual task names
                             for (other_name, other_task) in &task_name_map {
-                                if dep.contains(&other_task.title) || other_task.title.contains(dep.trim()) {
-                                    dependencies.push(*other_name);
+                                if dep.trim() == other_task.title.to_lowercase().replace(" ", "-") ||
+                                   dep.contains(&other_task.title) ||
+                                   other_task.title.to_lowercase().contains(&dep.trim().to_lowercase()) {
+                                    dependencies.push((*other_name).to_string());
                                     break;
                                 }
                             }
@@ -375,13 +383,41 @@ fn build_task_dependency_graph<'a>(tasks: &'a [Task]) -> HashMap<&'a str, Vec<&'
     graph
 }
 
+/// Parse folder structure to determine dependencies
+fn parse_folder_dependencies(file_path: &std::path::Path) -> Option<Vec<String>> {
+    let path_str = file_path.to_string_lossy();
+
+    // Extract the relative path from todo/
+    if let Some(todo_pos) = path_str.find("todo/") {
+        let relative_path = &path_str[todo_pos + 5..]; // Skip "todo/"
+        let parts: Vec<&str> = relative_path.split('/').collect();
+
+        if parts.len() > 1 {
+            // This file is in a subfolder, so it depends on the parent folder's task
+            // Map folder numbers to task titles
+            let parent_task = match parts[0] {
+                "010-core-functionality" => "Implement Core Auto-Todo Functionality",
+                "050-advanced-features" => "Implement Advanced Features", // This would be a parent task
+                "060-documentation" => "Implement Documentation Tasks", // This would be a parent task
+                _ => return None,
+            };
+            Some(vec![parent_task.to_string()])
+        } else {
+            // Root level file, no dependencies
+            None
+        }
+    } else {
+        None
+    }
+}
+
 /// Count dependencies for a task
-fn count_dependencies<'a>(task: &'a Task, graph: &HashMap<&'a str, Vec<&'a str>>) -> usize {
+fn count_dependencies<'a>(task: &'a Task, graph: &HashMap<&'a str, Vec<String>>) -> usize {
     graph.get(task.title.as_str()).map(|deps| deps.len()).unwrap_or(0)
 }
 
 /// Topological sort tasks by dependencies (simple implementation)
-fn topological_sort_by_dependencies<'a>(tasks: &'a [Task], graph: &HashMap<&'a str, Vec<&'a str>>) -> Vec<&'a Task> {
+fn topological_sort_by_dependencies<'a>(tasks: &'a [Task], graph: &HashMap<&'a str, Vec<String>>) -> Vec<&'a Task> {
     let mut result = Vec::new();
     let mut processed = std::collections::HashSet::new();
 

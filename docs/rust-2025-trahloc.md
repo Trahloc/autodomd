@@ -27,10 +27,10 @@ This is a **layout, naming, and architecture specification only**. It does not c
 3. **Flattened Microcrates**  
    All non-binary microcrates omit the `src/` directory. `Cargo.toml` lives alongside the root `X.rs` file. The `src/` directory is reserved for the binary crate only.
 
-4. **One Binary Front Door**
+4. **One Binary Front Door**  
    Exactly one primary binary crate under `bin/`, responsible for the main executable. All other crates are libraries accessed via optional dependencies and feature flags.
 
-5. **Strict Semantic Naming**
+5. **Strict Semantic Naming**  
    Names are maximally descriptive for zero-inference AI comprehension.
 
 6. **Extramark Documentation Standard**

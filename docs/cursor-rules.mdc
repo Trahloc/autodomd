@@ -1,0 +1,48 @@
+# AutoDomd Task Organization - Mandatory Dependency Tree
+
+## Rule: Folder Structure = Dependency Hierarchy
+
+**MANDATORY**: All tasks in `todo/` MUST follow strict dependency hierarchy via folder structure.
+
+### Structure Pattern
+```
+todo/
+├── XXX-foundation-task.md                    # Root level = no dependencies
+├── XXX-foundation-task/                      # Subfolder = depends on parent
+│   ├── YYY-dependent-task.md
+│   └── YYY-dependent-task/
+│       └── ZZZ-subdependent-task.md          # Max 3 levels deep
+└── AAA-separate-foundation.md                # Independent root task
+```
+
+### Numbering System
+- **XXX**: Increments of 10 (010, 020, 030...) for insertion room
+- **YYY/ZZZ**: Continue numbering within subfolders
+- **Allows future task insertion** without renumbering entire tree
+
+### Dependency Rules
+1. **Root level**: Foundational tasks (nothing depends on these)
+2. **Level 2**: Depends directly on parent folder's root task
+3. **Level 3**: Depends on Level 2 parent (maximum depth)
+4. **No cycles**: Dependencies flow downward only
+
+### File Naming
+- `XXX-brief-task-name.md` (kebab-case, no spaces in filenames)
+- Task title in file can be more descriptive
+
+### AI Comprehension
+- **Folder path = dependency chain** (AI can parse structure)
+- **Numbers = execution order** (lower numbers = higher priority)
+- **Depth = complexity level** (deeper = more complex dependencies)
+
+### Enforcement
+- **REJECT** any todo/ organization that violates hierarchy
+- **REQUIRE** folder-based dependencies for all tasks
+- **MAXIMUM 3 levels** deep (reject deeper nesting)
+
+### Why This Works
+- **Visual dependency mapping** (folder structure shows relationships)
+- **Scalable numbering** (10s allow insertions)
+- **AI-parseable** (structure conveys meaning)
+- **Prevents dependency cycles** (tree structure)
+- **Forces thoughtful organization** (must consider dependencies)
