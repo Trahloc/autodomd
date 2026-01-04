@@ -7,3 +7,5 @@ edition = "2021"
 path = "scanner.rs"
 
 [dependencies]
+autodomd-library-common = { path = "../common" }
+walkdir = "2.0"

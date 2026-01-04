@@ -7,3 +7,5 @@ edition = "2021"
 path = "parser.rs"
 
 [dependencies]
+autodomd-library-common = { path = "../common" }
+regex = "1.0"
