@@ -106,109 +106,77 @@ fn generate_markdown_content(tasks: &[Task], config: &GeneratorConfig) -> String
             content.push_str(&format!("## {} (Priority Level {})\n\n", level_name, level_idx + 1));
 
             for task in level_tasks.iter() {
-                // Task header with category context
-                let category_indicator = match task.category.display_name() {
-                    "Architecture" => "🏗️",
-                    "Implementation" => "⚙️",
-                    "Integration" => "🔗",
-                    "Validation" => "✅",
-                    "Advanced" => "🚀",
-                    "Documentation" => "📚",
-                    _ => "📋",
-                };
+                // Cohesive task header with file path
+                content.push_str(&format!("### {} - {}\n", task.title, task.location.file_path.display()));
 
-                content.push_str(&format!("### {} {}\n\n", category_indicator, task.title));
+                // Compact metadata as bullet points
+                let mut metadata_items = Vec::new();
 
-                // Add brief description if available
-                if let TaskSource::Markdown = task.source {
-                    if let Ok(description) = extract_brief_description(&task.location.file_path) {
-                        if !description.is_empty() {
-                            content.push_str(&format!("{}\n\n", description));
-                        }
-                    }
-                }
-
-                // Add key metadata in clean format
-                let mut metadata_lines = Vec::new();
-
-                // Add Zulu timestamps
+                // Add timestamps
                 if let Ok(metadata) = std::fs::metadata(&task.location.file_path) {
                     if let Ok(created) = metadata.created() {
                         let created_dt: DateTime<Utc> = created.into();
-                        metadata_lines.push(format!("📅 Created: {}", created_dt.format("%Y-%m-%dT%H:%M:%SZ")));
+                        metadata_items.push(format!("Created: {}", created_dt.format("%Y-%m-%dT%H:%M:%SZ")));
                     }
                     if let Ok(modified) = metadata.modified() {
                         let modified_dt: DateTime<Utc> = modified.into();
-                        metadata_lines.push(format!("🔄 Modified: {}", modified_dt.format("%Y-%m-%dT%H:%M:%SZ")));
+                        metadata_items.push(format!("Modified: {}", modified_dt.format("%Y-%m-%dT%H:%M:%SZ")));
                     }
                 }
 
-                // Add extracted metadata from YAML frontmatter (dependencies, effort, etc.)
+                // Add effort if available
                 if let TaskSource::Markdown = task.source {
                     if let Ok(metadata) = extract_task_metadata(&task.location.file_path) {
                         for (key, value) in metadata {
-                            match key.as_str() {
-                                "dependencies" if !value.is_empty() && value != "[]" => {
-                                    let cleaned = clean_yaml_array(&value);
-                                    if !cleaned.is_empty() {
-                                        metadata_lines.push(format!("🔗 Depends: {}", cleaned));
-                                    }
-                                }
-                                "blocks" if !value.is_empty() && value != "[]" => {
-                                    let cleaned = clean_yaml_array(&value);
-                                    if !cleaned.is_empty() {
-                                        metadata_lines.push(format!("🚫 Blocks: {}", cleaned));
-                                    }
-                                }
-                                "estimated_effort" => {
-                                    metadata_lines.push(format!("⚡ Effort: {}", value));
-                                }
-                                _ => {}
+                            if key == "estimated_effort" {
+                                metadata_items.push(format!("Effort: {}", value));
                             }
                         }
                     }
                 }
 
-                if !metadata_lines.is_empty() {
-                    content.push_str(&metadata_lines.join(" • "));
-                    content.push_str("\n\n");
+                // Output metadata as clean bullets
+                for item in metadata_items {
+                    content.push_str(&format!("- {}\n", item));
                 }
 
-                // Show comprehensive relationships
+                // Add brief description with proper indentation
                 if let TaskSource::Markdown = task.source {
-                    if let Ok(metadata) = extract_task_metadata(&task.location.file_path) {
-                        let mut has_relationships = false;
-
-                        for (key, value) in &metadata {
-                            match key.as_str() {
-                                "dependencies" if !value.is_empty() && value != "[]" => {
-                                    if !has_relationships {
-                                        content.push_str("**Relationships:**\n");
-                                        has_relationships = true;
-                                    }
-                                    let deps = clean_yaml_array(&value);
-                                    content.push_str(&format!("  - 🔗 **Depends on:** {}\n", deps));
-                                }
-                                "blocks" if !value.is_empty() && value != "[]" => {
-                                    if !has_relationships {
-                                        content.push_str("**Relationships:**\n");
-                                        has_relationships = true;
-                                    }
-                                    let blockers = clean_yaml_array(&value);
-                                    content.push_str(&format!("  - 🚫 **Enables:** {}\n", blockers));
-                                }
-                                _ => {}
-                            }
-                        }
-
-                        if has_relationships {
+                    if let Ok(description) = extract_brief_description(&task.location.file_path) {
+                        if !description.is_empty() {
+                            content.push_str(&format!("-- {}\n\n", description));
+                        } else {
                             content.push_str("\n");
                         }
                     }
                 }
 
-                // Link to full specification
-                content.push_str(&format!("📄 {}\n\n", task.location.file_path.display()));
+                // Show relationships in a compact format
+                if let TaskSource::Markdown = task.source {
+                    if let Ok(metadata) = extract_task_metadata(&task.location.file_path) {
+                        let mut relationships = Vec::new();
+
+                        for (key, value) in metadata {
+                            match key.as_str() {
+                                "dependencies" if !value.is_empty() && value != "[]" => {
+                                    let deps = clean_yaml_array(&value);
+                                    relationships.push(format!("Depends: {}", deps));
+                                }
+                                "blocks" if !value.is_empty() && value != "[]" => {
+                                    let blockers = clean_yaml_array(&value);
+                                    relationships.push(format!("Enables: {}", blockers));
+                                }
+                                _ => {}
+                            }
+                        }
+
+                        if !relationships.is_empty() {
+                            content.push_str("**Relationships:** ");
+                            content.push_str(&relationships.join(" • "));
+                            content.push_str("\n\n");
+                        }
+                    }
+                }
             }
 
             content.push_str("\n");
