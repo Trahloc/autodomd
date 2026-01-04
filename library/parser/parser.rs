@@ -7,7 +7,7 @@ use std::fs;
 use std::path::Path;
 use regex::Regex;
 
-use autodomd_library_common::{Task, TaskCategory, TodoResult};
+use autodomd_library_common::{Task, TaskCategory, TaskPriority, TodoResult};
 
 /// Parse markdown files for TODO tasks
 pub fn parse_markdown_files(files: &[std::path::PathBuf]) -> TodoResult<Vec<Task>> {
@@ -33,11 +33,15 @@ fn parse_markdown_file(file_path: &Path) -> TodoResult<Vec<Task>> {
     // Extract category from directory structure
     let category = extract_category_from_path(file_path);
 
+    // Extract priority from metadata (default to Medium)
+    let priority = extract_priority_from_content(&content);
+
     // Look for the first H1 header
     if let Some(title) = extract_first_h1(&content) {
-        let task = Task::from_markdown(
+        let task = Task::from_markdown_with_priority(
             title.to_string(),
             category,
+            priority,
             file_path.to_path_buf(),
         );
         Ok(vec![task])
@@ -48,13 +52,65 @@ fn parse_markdown_file(file_path: &Path) -> TodoResult<Vec<Task>> {
             .and_then(|s| s.to_str())
             .unwrap_or("Unknown Task");
 
-        let task = Task::from_markdown(
+        let task = Task::from_markdown_with_priority(
             filename.to_string(),
             category,
+            priority,
             file_path.to_path_buf(),
         );
         Ok(vec![task])
     }
+}
+
+/// Extract priority from markdown content (looks for YAML metadata or **Priority:** line)
+fn extract_priority_from_content(content: &str) -> TaskPriority {
+    // First try to extract from YAML metadata block
+    if let Some(yaml_block) = extract_yaml_metadata(content) {
+        if let Some(priority_line) = yaml_block.lines().find(|line| line.starts_with("priority:")) {
+            if let Some(priority_str) = priority_line.strip_prefix("priority:").map(|s| s.trim().trim_matches('"')) {
+                return match priority_str.to_lowercase().as_str() {
+                    "high" => TaskPriority::High,
+                    "low" => TaskPriority::Low,
+                    _ => TaskPriority::Medium,
+                };
+            }
+        }
+    }
+
+    // Fallback to old **Priority:** format
+    for line in content.lines() {
+        if let Some(priority_str) = line.strip_prefix("**Priority:**") {
+            let priority = priority_str.trim().to_lowercase();
+            return match priority.as_str() {
+                "high" => TaskPriority::High,
+                "low" => TaskPriority::Low,
+                _ => TaskPriority::Medium,
+            };
+        }
+    }
+    TaskPriority::Medium // Default
+}
+
+/// Extract YAML metadata block from markdown content
+fn extract_yaml_metadata(content: &str) -> Option<&str> {
+    let lines: Vec<&str> = content.lines().collect();
+
+    // Look for ```yaml or ``` followed by yaml content
+    let mut in_yaml_block = false;
+    let mut yaml_start = None;
+
+    for (i, line) in lines.iter().enumerate() {
+        if line.trim() == "```yaml" || (line.trim() == "```" && i < lines.len() - 1 && lines[i + 1].contains("priority:")) {
+            in_yaml_block = true;
+            yaml_start = Some(i + 1);
+        } else if in_yaml_block && line.trim() == "```" {
+            if let Some(start) = yaml_start {
+                return Some(&content[lines[start..i].iter().map(|s| s.len() + 1).sum::<usize>() - 1..lines[i].as_ptr() as usize - content.as_ptr() as usize]);
+            }
+        }
+    }
+
+    None
 }
 
 /// Extract category from the directory path relative to todo/

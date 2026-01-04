@@ -1,5 +1,12 @@
 # Implement Core Auto-Todo Functionality
 
+```yaml
+priority: high
+dependencies: []
+blocks: ["configuration-file", "incremental-updates", "output-formats", "cli-interface", "git-hooks", "ci-cd-validation", "testing-validation"]
+estimated_effort: high
+```
+
 ## Overview
 Create the core functionality to scan source code and markdown files for TODO items and generate a consolidated TODO.md file.
 

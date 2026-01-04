@@ -53,6 +53,14 @@ pub enum TaskCategory {
     Custom(String),
 }
 
+/// Priority levels for task organization
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum TaskPriority {
+    Low,
+    Medium,
+    High,
+}
+
 impl TaskCategory {
     /// Create a TaskCategory from a string
     pub fn from_str(s: &str) -> Self {
@@ -85,6 +93,8 @@ pub struct Task {
     pub title: String,
     /// The category this task belongs to
     pub category: TaskCategory,
+    /// Priority level for organization
+    pub priority: TaskPriority,
     /// Where this task was found
     pub location: TaskLocation,
     /// The source type of this task
@@ -96,12 +106,14 @@ impl Task {
     pub fn new(
         title: String,
         category: TaskCategory,
+        priority: TaskPriority,
         location: TaskLocation,
         source: TaskSource,
     ) -> Self {
         Self {
             title,
             category,
+            priority,
             location,
             source,
         }
@@ -112,6 +124,7 @@ impl Task {
         Self::new(
             title,
             category,
+            TaskPriority::Medium, // Default priority for markdown tasks
             TaskLocation::from_markdown_file(file_path),
             TaskSource::Markdown,
         )
@@ -127,8 +140,25 @@ impl Task {
         Self::new(
             title,
             category,
+            TaskPriority::Medium, // Default priority for code tasks
             TaskLocation::from_source_file(file_path, line_number),
             TaskSource::Code,
+        )
+    }
+
+    /// Create a task from markdown with explicit priority
+    pub fn from_markdown_with_priority(
+        title: String,
+        category: TaskCategory,
+        priority: TaskPriority,
+        file_path: PathBuf,
+    ) -> Self {
+        Self::new(
+            title,
+            category,
+            priority,
+            TaskLocation::from_markdown_file(file_path),
+            TaskSource::Markdown,
         )
     }
 }

@@ -1,5 +1,12 @@
 # Implement Testing and Validation
 
+```yaml
+priority: high
+dependencies: ["core-functionality"]
+blocks: []
+estimated_effort: medium
+```
+
 ## Overview
 Create comprehensive tests and validation examples to ensure the auto-todo system works correctly.
 

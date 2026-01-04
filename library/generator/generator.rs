@@ -6,7 +6,7 @@
 use std::collections::HashMap;
 use std::fs;
 
-use autodomd_library_common::{Task, TaskCollection, TodoResult};
+use autodomd_library_common::{Task, TaskCollection, TaskSource, TodoResult};
 
 /// Configuration for TODO.md generation
 #[derive(Debug, Clone)]
@@ -67,16 +67,28 @@ fn generate_markdown_content(tasks: &[Task], config: &GeneratorConfig) -> String
         tasks_by_category.entry(category_name).or_insert_with(Vec::new).push(task);
     }
 
-    // Generate sections for each category
+    // Generate sections for each category, sorted by priority within each category
     let mut category_names: Vec<String> = tasks_by_category.keys().cloned().collect();
     category_names.sort();
 
     for category_name in category_names {
-        if let Some(category_tasks) = tasks_by_category.get(&category_name) {
+        if let Some(category_tasks) = tasks_by_category.get_mut(&category_name) {
             content.push_str(&format!("## {}\n\n", category_name));
 
-            for task in category_tasks {
+            // Sort tasks within category by priority (High first, then Medium, then Low)
+            category_tasks.sort_by(|a, b| b.priority.cmp(&a.priority));
+
+            for task in category_tasks.iter() {
                 content.push_str(&format!("{}\n", task));
+
+                // Add brief description if available (from markdown tasks)
+                if let TaskSource::Markdown = task.source {
+                    if let Ok(description) = extract_brief_description(&task.location.file_path) {
+                        if !description.is_empty() {
+                            content.push_str(&format!("  *{}*\n", description));
+                        }
+                    }
+                }
             }
 
             content.push_str("\n");
@@ -173,5 +185,40 @@ mod tests {
         assert!(summary.contains("Task Summary"));
         assert!(summary.contains("General"));
         assert!(summary.contains("Auth"));
+    }
+}
+
+/// Extract a brief description from a markdown task file
+fn extract_brief_description(file_path: &std::path::Path) -> TodoResult<String> {
+    let content = std::fs::read_to_string(file_path)?;
+
+    // Skip YAML metadata block if present
+    let content_after_yaml = if content.trim().starts_with("```yaml") {
+        if let Some(end_yaml) = content.find("```\n") {
+            &content[end_yaml + 4..]
+        } else {
+            &content
+        }
+    } else {
+        &content
+    };
+
+    // Look for Overview section
+    if let Some(overview_start) = content_after_yaml.find("## Overview") {
+        let after_overview = &content_after_yaml[overview_start + 11..];
+        if let Some(end_section) = after_overview.find("\n## ") {
+            let overview_text = &after_overview[..end_section].trim();
+            // Take first sentence or first 100 chars
+            if let Some(first_sentence_end) = overview_text.find('.') {
+                if first_sentence_end < 100 {
+                    return Ok(overview_text[..first_sentence_end + 1].to_string());
+                }
+            }
+            Ok(overview_text.chars().take(100).collect::<String>() + if overview_text.len() > 100 { "..." } else { "" })
+        } else {
+            Ok("".to_string())
+        }
+    } else {
+        Ok("".to_string())
     }
 }
