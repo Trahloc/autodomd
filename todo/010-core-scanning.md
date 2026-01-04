@@ -3,7 +3,7 @@
 ```yaml
 priority: high
 dependencies: []
-blocks: ["configuration-file", "incremental-updates", "output-formats", "cli-interface", "git-hooks", "ci-cd-validation", "testing-validation"]
+blocks: ["cli-interface", "testing-validation", "git-integration", "ci-cd-validation", "configuration-file", "incremental-updates", "output-formats", "error-messages", "readme-updates"]
 estimated_effort: high
 ```
 

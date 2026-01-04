@@ -394,12 +394,12 @@ fn parse_folder_dependencies(file_path: &std::path::Path) -> Option<Vec<String>>
 
         if parts.len() > 1 {
             // This file is in a subfolder, so it depends on the parent folder's task
-            // Map folder numbers to task titles
+            // Map folder numbers to task titles - everything depends on core scanning
             let parent_task = match parts[0] {
-                "010-core-functionality" => "Implement Core Auto-Todo Functionality",
-                "050-advanced-features" => "Implement Advanced Features", // This would be a parent task
-                "060-documentation" => "Implement Documentation Tasks", // This would be a parent task
-                _ => return None,
+                "060-git-integration" => "Implement Git Integration and Automation",
+                "070-advanced-features" => "Implement Core Auto-Todo Functionality", // Advanced features depend on core
+                "080-documentation" => "Implement Core Auto-Todo Functionality", // Documentation depends on core
+                _ => "Implement Core Auto-Todo Functionality", // Default to core dependency
             };
             Some(vec![parent_task.to_string()])
         } else {
