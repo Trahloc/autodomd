@@ -11,6 +11,8 @@ The rust-2026-Trahloc Microcrate Convention (r2026t) defines a strict directory,
 
 This is a **layout, naming, and architecture specification only**. It does not change Rust semantics, editions, or compiler behavior. It layers on top of Rust 2021 and later editions.
 
+**Documentation Standard:** All project documentation follows the [Extramark](https://extramark.ai) standard for AI-first markdown with YAML frontmatter, structured sections, and machine-readable metadata.
+
 ---
 
 ## 1. Core Principles
@@ -25,13 +27,20 @@ This is a **layout, naming, and architecture specification only**. It does not c
 3. **Flattened Microcrates**  
    All non-binary microcrates omit the `src/` directory. `Cargo.toml` lives alongside the root `X.rs` file. The `src/` directory is reserved for the binary crate only.
 
-4. **One Binary Front Door**  
+4. **One Binary Front Door**
    Exactly one primary binary crate under `bin/`, responsible for the main executable. All other crates are libraries accessed via optional dependencies and feature flags.
 
-5. **Strict Semantic Naming**  
+5. **Strict Semantic Naming**
    Names are maximally descriptive for zero-inference AI comprehension.
 
-6. **Tooling Compatibility**  
+6. **Extramark Documentation Standard**
+   All documentation uses [Extramark](https://extramark.ai) format:
+   - YAML frontmatter with structured metadata
+   - Machine-readable headers and sections
+   - AI-first content organization
+   - Zero external context dependencies
+
+7. **Tooling Compatibility**
    Tools must respect explicit `path` fields in `Cargo.toml`. No redirects or legacy filenames are permitted.
 
 ---

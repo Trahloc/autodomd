@@ -7,6 +7,7 @@ use std::collections::HashMap;
 use std::fs;
 
 use autodomd_library_common::{Task, TaskCollection, TaskSource, TodoResult};
+use chrono::{DateTime, Utc};
 
 /// Configuration for TODO.md generation
 #[derive(Debug, Clone)]
@@ -54,9 +55,19 @@ fn generate_markdown_content(tasks: &[Task], config: &GeneratorConfig) -> String
 
     // Add header
     if config.include_header {
-        content.push_str("# Project Tasks\n");
-        content.push_str("*Auto-generated. Do not edit.*\n\n");
+        content.push_str("---\n");
+        content.push_str("format: extramark-todo-v1\n");
+        content.push_str("generator: autodomd\n");
+        content.push_str("generated_at: ");
+        let now: DateTime<Utc> = Utc::now();
+        content.push_str(&now.format("%Y-%m-%dT%H:%M:%SZ").to_string());
+        content.push_str("\n");
+        content.push_str("total_tasks: ");
+        content.push_str(&tasks.len().to_string());
+        content.push_str("\n");
+        content.push_str("regenerate_command: autodomd generate\n");
         content.push_str("---\n\n");
+        content.push_str("# Project Tasks\n\n");
     }
 
     // Group tasks by category
@@ -79,16 +90,50 @@ fn generate_markdown_content(tasks: &[Task], config: &GeneratorConfig) -> String
             category_tasks.sort_by(|a, b| b.priority.cmp(&a.priority));
 
             for task in category_tasks.iter() {
-                content.push_str(&format!("{}\n", task));
+                // AI-centric task format
+                content.push_str(&format!("## {}\n\n", task.title));
 
-                // Add brief description if available (from markdown tasks)
+                // Structured metadata block
+                content.push_str("```yaml\n");
+                content.push_str(&format!("id: {}\n", task.location.file_path.display()));
+                content.push_str(&format!("category: {}\n", task.category.display_name()));
+                content.push_str(&format!("priority: {}\n", match task.priority {
+                    autodomd_library_common::TaskPriority::High => "high",
+                    autodomd_library_common::TaskPriority::Medium => "medium",
+                    autodomd_library_common::TaskPriority::Low => "low",
+                }));
+
+                if let Some(line) = task.location.line_number {
+                    content.push_str(&format!("line: {}\n", line));
+                }
+
+                content.push_str(&format!("source: {}\n", match task.source {
+                    TaskSource::Markdown => "markdown",
+                    TaskSource::Code => "code",
+                }));
+
+                // Add extracted metadata from markdown files
                 if let TaskSource::Markdown = task.source {
-                    if let Ok(description) = extract_brief_description(&task.location.file_path) {
-                        if !description.is_empty() {
-                            content.push_str(&format!("  *{}*\n", description));
+                    if let Ok(metadata) = extract_task_metadata(&task.location.file_path) {
+                        for (key, value) in metadata {
+                            content.push_str(&format!("{}: {}\n", key, value));
                         }
                     }
                 }
+
+                content.push_str("```\n\n");
+
+                // Add brief description if available
+                if let TaskSource::Markdown = task.source {
+                    if let Ok(description) = extract_brief_description(&task.location.file_path) {
+                        if !description.is_empty() {
+                            content.push_str(&format!("**Overview:** {}\n\n", description));
+                        }
+                    }
+                }
+
+                // Link to full specification
+                content.push_str(&format!("**Full specification:** {}\n\n", task.location.file_path.display()));
             }
 
             content.push_str("\n");
@@ -188,14 +233,66 @@ mod tests {
     }
 }
 
+/// Extract structured metadata from a markdown task file
+fn extract_task_metadata(file_path: &std::path::Path) -> TodoResult<Vec<(String, String)>> {
+    let content = std::fs::read_to_string(file_path)?;
+    let mut metadata = Vec::new();
+
+    // Extract YAML metadata block
+    if let Some(yaml_block) = extract_yaml_metadata_block(&content) {
+        for line in yaml_block.lines() {
+            let line = line.trim();
+            if line.is_empty() || line.starts_with('#') {
+                continue;
+            }
+            if let Some(colon_pos) = line.find(':') {
+                let key = line[..colon_pos].trim().to_string();
+                let value = line[colon_pos + 1..].trim().trim_matches('"').to_string();
+                if !key.is_empty() && !value.is_empty() {
+                    metadata.push((key, value));
+                }
+            }
+        }
+    }
+
+    Ok(metadata)
+}
+
+/// Extract YAML metadata block from markdown content
+fn extract_yaml_metadata_block(content: &str) -> Option<&str> {
+    let lines: Vec<&str> = content.lines().collect();
+
+    // Look for ```yaml or ``` followed by yaml content
+    let mut in_yaml_block = false;
+    let mut yaml_start = None;
+
+    for (i, line) in lines.iter().enumerate() {
+        let trimmed = line.trim();
+        if trimmed == "```yaml" || (trimmed == "```" && i < lines.len() - 1 &&
+            (lines[i + 1].contains("priority:") || lines[i + 1].contains("dependencies:"))) {
+            in_yaml_block = true;
+            yaml_start = Some(i + 1);
+        } else if in_yaml_block && trimmed == "```" {
+            if let Some(start) = yaml_start {
+                return Some(&content[lines[start].as_ptr() as usize - content.as_ptr() as usize..
+                               lines[i].as_ptr() as usize - content.as_ptr() as usize]);
+            }
+        }
+    }
+
+    None
+}
+
 /// Extract a brief description from a markdown task file
 fn extract_brief_description(file_path: &std::path::Path) -> TodoResult<String> {
     let content = std::fs::read_to_string(file_path)?;
 
     // Skip YAML metadata block if present
-    let content_after_yaml = if content.trim().starts_with("```yaml") {
-        if let Some(end_yaml) = content.find("```\n") {
-            &content[end_yaml + 4..]
+    let content_after_yaml = if let Some(yaml_block) = extract_yaml_metadata_block(&content) {
+        // Find the end of YAML block and skip to content after ```
+        if let Some(end_pos) = content[yaml_block.as_ptr() as usize - content.as_ptr() as usize..].find("```\n") {
+            let yaml_end_pos = yaml_block.as_ptr() as usize - content.as_ptr() as usize + end_pos + 4;
+            &content[yaml_end_pos..]
         } else {
             &content
         }
@@ -208,15 +305,16 @@ fn extract_brief_description(file_path: &std::path::Path) -> TodoResult<String> 
         let after_overview = &content_after_yaml[overview_start + 11..];
         if let Some(end_section) = after_overview.find("\n## ") {
             let overview_text = &after_overview[..end_section].trim();
-            // Take first sentence or first 100 chars
+            // Take first sentence or first 200 chars for more context
             if let Some(first_sentence_end) = overview_text.find('.') {
-                if first_sentence_end < 100 {
+                if first_sentence_end < 200 {
                     return Ok(overview_text[..first_sentence_end + 1].to_string());
                 }
             }
-            Ok(overview_text.chars().take(100).collect::<String>() + if overview_text.len() > 100 { "..." } else { "" })
+            Ok(overview_text.chars().take(200).collect::<String>() + if overview_text.len() > 200 { "..." } else { "" })
         } else {
-            Ok("".to_string())
+            // Take the whole overview section if no other sections follow
+            Ok(after_overview.trim().chars().take(200).collect::<String>() + if after_overview.len() > 200 { "..." } else { "" })
         }
     } else {
         Ok("".to_string())
